@@ -13,7 +13,7 @@ import {
   verificationBadges, waitedFor, waitingTexts, whenLabel,
   NOT_CONFIRMED, TAKE_DOWN_NOTIFIED, handleArgs, handleConfirmText, handleErrorText, handleRefusalIsStale,
   handledText, handlingProblem, reportActionHint, reportActionLabel, reportActions, reportFromLine, reportHidden,
-  reportList, reportNoticeShown, reportReasonSentence, reportReviewTitle, reportRowText, reportTargetState,
+  reportList, reportNoticeShown, reportPlace, reportReasonSentence, reportReviewTitle, reportRowText, reportTargetState,
   reportWaiting,
 } from '/review/lib.js';
 
@@ -1604,13 +1604,15 @@ async function finishCaseAction(id, token, meta, { data, error }) {
 }
 
 // ---------------------------------------------------------------------------
-// Reports (R11): reports about services, reviews and the replies under them. A report closes with one of
-// four actions, each with the team's note; the server also closes every other open report on the same target.
+// Reports (R11): reports about services, reviews, the replies under them, lost-pet alerts and hazards. A report
+// closes with one of four actions, each with the team's note; the server also closes every other open report on
+// the same target. Lost-pet alert and hazard reports are dismissed only; a type this page doesn't know is a row
+// with no action.
 // The names, titles and texts come from users: textContent only, as everywhere else on this page.
 // ---------------------------------------------------------------------------
 
-const REPORTS_INTRO = 'Reports about services, reviews and replies. Every action closes the report and is saved with your note.';
-const REPORTS_FOOTNOTE = 'Review reports show Dismiss and Hide review; reply reports show Dismiss and Hide reply. User, post, message and comment reports stay where they are today.';
+const REPORTS_INTRO = 'Reports about services, reviews, replies, lost-pet alerts and hazards. Every action closes the report and is saved with your note.';
+const REPORTS_FOOTNOTE = 'Review reports show Dismiss and Hide review; reply reports show Dismiss and Hide reply; lost-pet alert and hazard reports show Dismiss only. User, post, message and comment reports stay where they are today.';
 const SAVING = 'Saving… please wait. Don’t close this page.';
 
 const objectOf = (v) => (v !== null && typeof v === 'object' && !Array.isArray(v) ? v : null);
@@ -1666,6 +1668,20 @@ function reportTargetPane(item) {
       el('span', {}, el('b', { textContent: text(t.title) ?? 'Untitled service' }), text(t.pro_display_name) ? ` · ${text(t.pro_display_name)}` : null),
       typeof t.status === 'string' ? `Status: ${t.status}` : null);
   }
+  const place = reportPlace(item);
+  if (place !== null) {
+    // Only what admin_list_reports sends about the alert or hazard: no photo, and nothing about who posted it.
+    const hazard = item.target_type === 'hazard';
+    const heading = hazard ? 'THE HAZARD, AS IT IS NOW' : 'THE LOST-PET ALERT, AS IT IS NOW';
+    if (place.gone) return pane(heading, none(`This ${hazard ? 'hazard' : 'lost-pet alert'} has been deleted.`));
+    return pane(heading,
+      el('span', {}, el('b', { textContent: hazard ? (place.title ?? 'Hazard') : `${place.title} lost` }), place.place ? ` · ${place.place}` : null),
+      place.status ? `Status: ${place.status}` : null,
+      place.note ? el('span', { className: 'quote', textContent: `“${place.note}”` }) : none('No note.'));
+  }
+  if (reportRowText(item).kind === 'OTHER') {
+    return pane('THE REPORTED ITEM', none('This tab doesn’t show what this report is about.'));
+  }
   if (t === null) return pane('THE REVIEW AND ITS REPLY', none(`This ${item.target_type === 'review' ? 'review' : 'reply'} has been deleted.`));
   const comment = text(t.comment);
   const reply = text(t.reply);
@@ -1687,8 +1703,10 @@ function reportCard(item) {
   const text = reportRowText(item);
   const waiting = reportWaiting(item, Date.now());
   const t = objectOf(item.target);
+  const placeStatus = reportPlace(item)?.status ?? null;
   const status = item.target_type === 'service' && typeof t?.status === 'string'
-    ? el('span', { className: t.status === 'live' ? 'tag ok' : 'tag warn', textContent: t.status }) : null;
+    ? el('span', { className: t.status === 'live' ? 'tag ok' : 'tag warn', textContent: t.status })
+    : placeStatus ? el('span', { className: placeStatus === 'active' ? 'tag ok' : 'tag warn', textContent: placeStatus }) : null;
   const state = reportTargetState(item);
   const article = el('article', { className: 'card case' },
     el('div', { className: 'case-head' },

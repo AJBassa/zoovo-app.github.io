@@ -1257,15 +1257,22 @@ export function markHandledErrorText(error) {
 // ---------------------------------------------------------------------------
 
 // A report is one item of admin_list_reports: {id, target_type, reason, created_at, reporter: {first_name},
-// target, target_text, earlier_reports, handled}. The tab takes the reports about a service, a review and the
-// reply under a review; user, post, message and comment reports stay where they are. As elsewhere in this file,
-// a missing or odd part reads as empty and nothing here trusts the shape.
+// target, target_text, earlier_reports, handled}. The tab takes the reports about a service, a review, the
+// reply under a review, a lost-pet alert and a hazard (migration 138); user, post, message and comment reports
+// stay where they are. A report about a target type this page doesn't know (the server may list more one day) is
+// shown as a generic row with no action: admin_handle_report refuses what it doesn't know. As elsewhere in this
+// file, a missing or odd part reads as empty and nothing here trusts the shape.
 
 const REPORT_KINDS = {
   service: { kind: 'SERVICE', tag: 'service report', noun: 'service' },
   review: { kind: 'REVIEW', tag: 'review report', noun: 'review' },
   review_reply: { kind: 'REPLY', tag: 'reply report', noun: 'reply' },
+  lost_pet_alert: { kind: 'LOST PET', tag: 'lost-pet alert report', noun: 'alert' },
+  hazard: { kind: 'HAZARD', tag: 'hazard report', noun: 'hazard' },
 };
+
+// A report about a target type this page doesn't know.
+const GENERIC_REPORT_KIND = { kind: 'OTHER', tag: 'other report', noun: 'item' };
 
 // The app's service sheet sends keys; the review and reply sheets send their own words, kept as they are.
 const REPORT_REASONS = {
@@ -1291,10 +1298,28 @@ function shortReason(text) {
   return chars.length <= REASON_SHOWN ? text : `${chars.slice(0, REASON_SHOWN).join('').trimEnd()}…`;
 }
 
-// The kind of a report the tab can show (it needs an id to be acted on), else null.
+// The kind of a report the tab can show (it needs an id and a target type), else null. A target type the page
+// doesn't know is the generic kind.
 function reportKind(item) {
   if (!isObject(item) || trimmed(item.id) === null || typeof item.target_type !== 'string') return null;
-  return Object.hasOwn(REPORT_KINDS, item.target_type) ? REPORT_KINDS[item.target_type] : null;
+  return Object.hasOwn(REPORT_KINDS, item.target_type) ? REPORT_KINDS[item.target_type] : GENERIC_REPORT_KIND;
+}
+
+// What report_admin_json says about the lost-pet alert or hazard a report is about: {gone, title, place,
+// status, note}. `gone` is true once the database no longer has it (target: null); the rest are null when
+// missing. A lost pet is titled by the pet's name ('A pet' without one), a hazard by its type in words
+// ('suspected_poison' reads 'Suspected poison'); the place is the alert's area or the hazard's park. Nothing
+// else of the target is read: the hazard's photo and who posted it stay out of this tab. null for a report about
+// anything else.
+export function reportPlace(item) {
+  if (reportKind(item) === null || (item.target_type !== 'lost_pet_alert' && item.target_type !== 'hazard')) return null;
+  const t = isObject(item.target) ? item.target : null;
+  const common = { gone: t === null, status: trimmed(t?.status), note: trimmed(t?.note) };
+  if (item.target_type === 'lost_pet_alert') {
+    return { ...common, title: t === null ? null : (trimmed(t.pet_name) ?? 'A pet'), place: trimmed(t?.area_label) };
+  }
+  const type = trimmed(t?.type)?.replaceAll('_', ' ');
+  return { ...common, title: type ? upperFirst(type) : null, place: trimmed(t?.park_name) };
 }
 
 // The names in a target. null parts are the ones the database no longer has. `subject` is the first name of the
@@ -1331,8 +1356,8 @@ export function reportList(data) {
   return { items, total };
 }
 
-// What the list's row and the card's head say about a report: {id, kind: 'SERVICE'|'REVIEW'|'REPLY', tag:
-// 'service report', by: who reported, reason (cut when long: the row, the heading and the aria-label use it),
+// What the list's row and the card's head say about a report: {id, kind: 'SERVICE'|'REVIEW'|'REPLY'|'LOST
+// PET'|'HAZARD'|'OTHER', tag: 'service report', by: who reported, reason (cut when long: the row, the heading and the aria-label use it),
 // fullReason (all of it, for the card), heading, what, reported: the text as reported, quoted, or null}.
 // null for something this tab doesn't list. A target the database no longer has (target: null) is named as
 // deleted; the text as reported stays. A pro's review of a pet parent is named by who it is about and by whom.
@@ -1359,9 +1384,23 @@ export function reportRowText(item) {
       subject = `Review by ${author ?? formerMember}`;
       what = [`By ${author ?? formerMember}`, pro].filter(Boolean).join(' · ');
     }
-  } else {
+  } else if (item.target_type === 'review_reply') {
     subject = t === null ? 'A deleted reply' : `Reply from ${pro ?? 'the pro'}`;
     what = t === null ? subject : `${pro ?? 'The pro'}, under ${possessive(author, 'a former member’s')} review`;
+  } else if (info !== GENERIC_REPORT_KIND) {
+    // A lost-pet alert or a hazard, as the server's own summary: "Pip lost · De Pijp · active",
+    // "Suspected poison · Vondelpark · expired".
+    const place = reportPlace(item);
+    if (place.gone) {
+      subject = item.target_type === 'hazard' ? 'A deleted hazard' : 'A deleted lost-pet alert';
+      what = subject;
+    } else {
+      subject = item.target_type === 'hazard' ? (place.title ?? 'A hazard') : `${place.title} lost`;
+      what = [subject, place.place, place.status].filter(Boolean).join(' · ');
+    }
+  } else {
+    subject = `A “${trimmed(item.target_type) ?? 'blank'}” report`;
+    what = `${subject}, not handled here`;
   }
   const text = trimmed(item.target_text);
   return {
@@ -1420,7 +1459,8 @@ export function reportWaiting(item, now = Date.now()) {
 // A flag that is missing or isn't `true` reads as not hidden, as does everything for a service or a target the
 // database no longer has.
 export function reportHidden(item) {
-  const t = reportKind(item) !== null && item.target_type !== 'service' && isObject(item.target) ? item.target : null;
+  const isReview = item?.target_type === 'review' || item?.target_type === 'review_reply';
+  const t = reportKind(item) !== null && isReview && isObject(item.target) ? item.target : null;
   return { review: t?.hidden === true, reply: t?.reply_hidden === true };
 }
 
@@ -1428,11 +1468,16 @@ export function reportHidden(item) {
 // (while the review isn't hidden), a reply dismiss and hide reply (while there is a reply that isn't hidden).
 // The server refuses an action on a target that is gone or already in that state (not_eligible), so when the
 // item says what the target is now (it has the `target` key) only dismiss is left for those; a row without the
-// key says nothing about it and gets the target's own list. [] for a report that is handled, or that this tab
-// doesn't take.
+// key says nothing about it and gets the target's own list. A lost-pet alert or hazard report is only ever
+// dismissed here: admin_handle_report refuses the other actions on them (not_eligible), and taking the alert or
+// hazard down is another call (admin_take_down_lost_alert, admin_take_down_hazard) this tab doesn't make. []
+// for a report that is handled, of a type this tab doesn't handle (the server would refuse any action), or that
+// this tab doesn't take.
 export function reportActions(item) {
   if (reportKind(item) === null || isObject(item.handled)) return [];
   const only = ['dismiss'];
+  if (item.target_type === 'lost_pet_alert' || item.target_type === 'hazard') return only;
+  if (!Object.hasOwn(REPORT_KINDS, item.target_type)) return [];
   if (!Object.hasOwn(item, 'target')) {
     return ['dismiss', { service: 'take_down', review: 'hide_review', review_reply: 'hide_reply' }[item.target_type]];
   }
@@ -1453,6 +1498,13 @@ export function reportTargetState(item) {
   const info = reportKind(item);
   if (info === null) return null;
   if (isObject(item.handled)) return 'This report was handled already.';
+  if (info === GENERIC_REPORT_KIND) return `This tab doesn’t handle “${trimmed(item.target_type) ?? 'blank'}” reports, so there is nothing to do here.`;
+  if (item.target_type === 'lost_pet_alert' || item.target_type === 'hazard') {
+    const what = item.target_type === 'hazard' ? 'hazard' : 'lost-pet alert';
+    return isObject(item.target)
+      ? `A ${what} report can only be dismissed from this tab. Taking the ${what} down isn’t done here.`
+      : `This ${what} has been deleted, so the report can only be dismissed.`;
+  }
   if (!Object.hasOwn(item, 'target')) return null;
   const t = isObject(item.target) ? item.target : null;
   const only = 'so the report can only be dismissed.';
@@ -1494,6 +1546,9 @@ export function reportActionHint(item, action) {
   const { t, direction, author, pro, subject } = targetParts(item.target);
   switch (action) {
     case 'dismiss':
+      if (item.target_type === 'lost_pet_alert' || item.target_type === 'hazard') {
+        return `Closes the report. The ${REPORT_KINDS[item.target_type].noun} stays as it is and nobody is notified. Needs the note.`;
+      }
       if (item.target_type !== 'service') return 'Nothing changes. Needs the note.';
       return t?.status === 'live' || t?.status === 'paused'
         ? `Closes the report. The service stays ${t.status} and nobody is notified.`
@@ -1571,7 +1626,7 @@ function closedWithText(item, action, open) {
   const rows = Array.isArray(open?.rows) ? open.rows : [];
   const cut = Number.isSafeInteger(open?.total) && open.total > rows.length;
   const others = otherOpenReports(item, rows);
-  const noun = REPORT_KINDS[item.target_type].noun;
+  const noun = reportKind(item).noun;
   if (others.length === 0) return cut ? `Any other open report on this ${noun} that isn’t loaded here is closed with it too.` : '';
   const names = others.map((other) => {
     const text = reportRowText(other);
@@ -1583,6 +1638,17 @@ function closedWithText(item, action, open) {
 }
 
 const sentences = (...parts) => parts.filter(Boolean).join(' ');
+
+// A lost-pet alert or hazard as a phrase for a question: "the lost-pet alert for Pip (De Pijp)", "the hazard
+// “Suspected poison” (Vondelpark)"; "a deleted hazard" once it is gone.
+function placePhrase(item, place) {
+  const hazard = item.target_type === 'hazard';
+  if (place.gone) return hazard ? 'a deleted hazard' : 'a deleted lost-pet alert';
+  const at = place.place ? ` (${place.place})` : '';
+  return hazard
+    ? `the hazard${place.title ? ` “${place.title}”` : ''}${at}`
+    : `the lost-pet alert for ${place.title}${at}`;
+}
 
 // The question before an action is sent: what happens, to whom, and which other open reports go with it (see
 // closedWithText; `open` is {rows, total}). `reason` is the take-down's reason for the pro, which it quotes.
@@ -1612,10 +1678,12 @@ export function handleConfirmText(item, action, reason, open) {
     case 'hide_reply':
       return sentences(`Hide ${theirs} reply under ${authors} review? Only the reply is hidden; the review stays.`, 'Nobody is notified.', closes);
     default: {
+      const place = reportPlace(item);
       const subjectOf = item.target_type === 'service' ? serviceName(title)
         : item.target_type === 'review' ? `the ${reviewPhrase(parts)}`
-          : `${theirs} reply under ${authors} review`;
-      const nothing = t?.status === 'live' || t?.status === 'paused'
+          : place !== null ? placePhrase(item, place)
+            : `${theirs} reply under ${authors} review`;
+      const nothing = item.target_type === 'service' && (t?.status === 'live' || t?.status === 'paused')
         ? `Nothing changes: the service stays ${t.status} and nobody is notified.`
         : 'Nothing changes and nobody is notified.';
       return sentences(`Dismiss this report about ${subjectOf}?`, nothing, closes);
