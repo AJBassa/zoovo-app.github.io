@@ -20,7 +20,7 @@ import {
   reportActions, reportTargetState, reportActionLabel, reportActionHint, validateHandling, handleArgs,
   handleConfirmText, handledText, handleErrorText, handleRefusalIsStale, TAKE_DOWN_NOTIFIED, reportFromLine,
   reportHidden, reportNoticeShown, LIST_RELOADED, otherOpenReports, reportReviewTitle, handlingProblem,
-  NOT_CONFIRMED, reportReasonSentence, reportPlace,
+  NOT_CONFIRMED, reportReasonSentence, reportPlace, handleCall, takeDownPlaceNotice,
 } from './lib.js';
 
 // verification as admin_list_pro_applications and admin_list_pros return it:
@@ -2524,14 +2524,20 @@ test('report_row_text_for_an_unknown_target_type_is_generic', () => {
 });
 
 test('report_actions_for_lost_pet_hazard_and_unknown_reports', () => {
-  // The RPC accepts dismiss only for these two: taking them down is another call.
-  assert.deepEqual(reportActions(lostReport()), ['dismiss']);
-  assert.deepEqual(reportActions(hazardReport()), ['dismiss']);
-  assert.deepEqual(reportActions(lostReport({ target: null })), ['dismiss']);
-  assert.deepEqual(reportActions(hazardReport({ target: { ...hazardReport().target, status: 'removed' } })), ['dismiss']);
+  // Dismiss, and the take-down while the alert or hazard is there and not removed.
+  assert.deepEqual(reportActions(lostReport()), ['dismiss', 'take_down']);
+  assert.deepEqual(reportActions(hazardReport()), ['dismiss', 'take_down']);
+  for (const status of ['expired', 'found', 'gone']) {
+    assert.deepEqual(reportActions(hazardReport({ target: { ...hazardReport().target, status } })), ['dismiss', 'take_down'], status);
+  }
   const bare = hazardReport();
   delete bare.target;
-  assert.deepEqual(reportActions(bare), ['dismiss']);
+  assert.deepEqual(reportActions(bare), ['dismiss', 'take_down']);
+  // Deleted, removed already, or no id to take down: the RPC would refuse, so dismiss only.
+  assert.deepEqual(reportActions(lostReport({ target: null })), ['dismiss']);
+  assert.deepEqual(reportActions(hazardReport({ target: { ...hazardReport().target, status: 'removed' } })), ['dismiss']);
+  assert.deepEqual(reportActions(lostReport({ target: { ...lostReport().target, status: 'removed' } })), ['dismiss']);
+  assert.deepEqual(reportActions(lostReport({ target: { ...lostReport().target, id: ' ' } })), ['dismiss']);
   // Handled already: nothing.
   const handled = { at: '2026-10-25T09:00:00Z', action: 'dismissed', note: 'x' };
   assert.deepEqual(reportActions(lostReport({ handled })), []);
@@ -2543,28 +2549,69 @@ test('report_actions_for_lost_pet_hazard_and_unknown_reports', () => {
   assert.deepEqual(reportActions(serviceReport()), ['dismiss', 'take_down']);
   assert.deepEqual(reportActions(reviewReport()), ['dismiss', 'hide_review']);
   assert.deepEqual(reportActions(replyReport()), ['dismiss', 'hide_reply']);
-  // A take-down or a hide is never sent for them.
-  for (const action of ['take_down', 'hide_review', 'hide_reply']) {
-    assert.equal(handleArgs(lostReport(), action, 'A fine note.', 'A fine reason.'), null, action);
-    assert.equal(handleArgs(hazardReport(), action, 'A fine note.', 'A fine reason.'), null, action);
+  // The hides are never sent for them.
+  for (const action of ['hide_review', 'hide_reply']) {
+    assert.equal(handleCall(lostReport(), action, 'A fine note.', 'A fine reason.'), null, action);
+    assert.equal(handleCall(hazardReport(), action, 'A fine note.', 'A fine reason.'), null, action);
   }
   assert.equal(handleArgs(strangeReport(), 'dismiss', 'A fine note.'), null);
+  assert.equal(handleCall(strangeReport(), 'dismiss', 'A fine note.'), null);
   assert.deepEqual(handleArgs(hazardReport(), 'dismiss', '  Looks like a real hazard.  ', 'ignored'),
     { p_report_id: 'rep-h1', p_action: 'dismiss', p_note: 'Looks like a real hazard.', p_reason: null });
-  assert.deepEqual(handleArgs(lostReport(), 'dismiss', 'The pet was found.'),
-    { p_report_id: 'rep-l1', p_action: 'dismiss', p_note: 'The pet was found.', p_reason: null });
+  assert.deepEqual(handleCall(lostReport(), 'dismiss', 'The pet was found.'),
+    { fn: 'admin_handle_report', args: { p_report_id: 'rep-l1', p_action: 'dismiss', p_note: 'The pet was found.', p_reason: null } });
+  assert.deepEqual(handleCall(serviceReport(), 'take_down', 'A fine note.', 'A fine reason.'),
+    { fn: 'admin_handle_report', args: { p_report_id: 'rep-s1', p_action: 'take_down', p_note: 'A fine note.', p_reason: 'A fine reason.' } });
   assert.equal(reportActionLabel('dismiss'), 'Dismiss');
+  assert.equal(reportActionLabel('take_down'), 'Take the service down');
+  assert.equal(reportActionLabel('take_down', serviceReport()), 'Take the service down');
+  assert.equal(reportActionLabel('take_down', lostReport()), 'Take the alert down');
+  assert.equal(reportActionLabel('take_down', hazardReport()), 'Take the hazard down');
+});
+
+test('taking_down_an_alert_or_hazard_is_its_own_call_with_a_reason', () => {
+  // admin_handle_report refuses take_down for them, so it is never sent there.
+  assert.equal(handleArgs(lostReport(), 'take_down', 'A fine note.', 'A fine reason.'), null);
+  assert.equal(handleArgs(hazardReport(), 'take_down', 'A fine note.', 'A fine reason.'), null);
+  // The target's id and the trimmed reason (5 to 1000 characters); the note isn't part of the call.
+  assert.deepEqual(handleCall(lostReport(), 'take_down', '', '  It is not a real alert.  '),
+    { fn: 'admin_take_down_lost_alert', args: { p_alert_id: 'alert-1', p_reason: 'It is not a real alert.' } });
+  assert.deepEqual(handleCall(hazardReport(), 'take_down', undefined, '\n Not a hazard. \n'),
+    { fn: 'admin_take_down_hazard', args: { p_hazard_id: 'haz-1', p_reason: 'Not a hazard.' } });
+  assert.equal(handleCall(hazardReport(), 'take_down', 'A fine note.', '12345').args.p_reason, '12345');
+  assert.equal(handleCall(hazardReport(), 'take_down', 'x', 'y'.repeat(1000)).args.p_reason.length, 1000);
+  assert.equal(handleCall(hazardReport(), 'take_down', 'x', '🐕'.repeat(1000)).args.p_reason, '🐕'.repeat(1000));
+  // The reason is required; nothing is sent without it. Its field is the one to focus.
+  const NEEDS = 'The reason is required: write at least 5 characters.';
+  for (const bad of ['1234', '  1234  ', '', '   ', null, undefined, 12345, {}]) {
+    assert.equal(handleCall(lostReport(), 'take_down', 'A fine note.', bad), null, String(bad));
+    assert.deepEqual(handlingProblem(lostReport(), 'take_down', 'A fine note.', bad), { field: 'reason', text: NEEDS }, String(bad));
+  }
+  assert.deepEqual(handlingProblem(hazardReport(), 'take_down', '', 'x'.repeat(1001)),
+    { field: 'reason', text: 'The reason can be at most 1000 characters.' });
+  assert.equal(handlingProblem(hazardReport(), 'take_down', '', 'A fine reason.'), null);
+  // Not on offer once the target is deleted or removed.
+  assert.equal(handleCall(lostReport({ target: null }), 'take_down', '', 'A fine reason.'), null);
+  assert.equal(handleCall(hazardReport({ target: { ...hazardReport().target, status: 'removed' } }), 'take_down', '', 'A fine reason.'), null);
+  assert.equal(handleCall(lostReport({ handled: { at: '2026-10-25T09:00:00Z', action: 'dismissed', note: 'x' } }), 'take_down', '', 'A fine reason.'), null);
+  // Dismiss keeps asking for the note, as ever.
+  assert.deepEqual(handlingProblem(hazardReport(), 'dismiss', '1234'), { field: 'note', text: validateNote('1234') });
 });
 
 test('report_target_state_for_lost_pet_hazard_and_unknown_reports', () => {
-  assert.equal(reportTargetState(lostReport()), 'A lost-pet alert report can only be dismissed from this tab. Taking the lost-pet alert down isn’t done here.');
-  assert.equal(reportTargetState(hazardReport()), 'A hazard report can only be dismissed from this tab. Taking the hazard down isn’t done here.');
+  assert.equal(reportTargetState(lostReport()), null);
+  assert.equal(reportTargetState(hazardReport()), null);
   assert.equal(reportTargetState(hazardReport({ target: null })), 'This hazard has been deleted, so the report can only be dismissed.');
   assert.equal(reportTargetState(lostReport({ target: null })), 'This lost-pet alert has been deleted, so the report can only be dismissed.');
+  assert.equal(reportTargetState(lostReport({ target: { ...lostReport().target, status: 'removed' } })),
+    'This lost-pet alert is removed already, so the report can only be dismissed.');
+  assert.equal(reportTargetState(hazardReport({ target: { ...hazardReport().target, status: 'removed' } })),
+    'This hazard is removed already, so the report can only be dismissed.');
   assert.equal(reportTargetState(lostReport({ handled: { at: '2026-10-25T09:00:00Z', action: 'dismissed', note: 'x' } })), 'This report was handled already.');
   assert.equal(reportTargetState(strangeReport()), 'This tab doesn’t handle “playdate” reports, so there is nothing to do here.');
   // Like the others: the card says why only Dismiss is left whenever it is.
-  for (const item of [lostReport(), hazardReport(), lostReport({ target: null }), hazardReport({ target: null })]) {
+  for (const item of [lostReport(), hazardReport(), lostReport({ target: null }), hazardReport({ target: null }),
+    hazardReport({ target: { ...hazardReport().target, status: 'removed' } })]) {
     assert.equal(reportTargetState(item) !== null, reportActions(item).length === 1, JSON.stringify(item));
   }
 });
@@ -2572,6 +2619,12 @@ test('report_target_state_for_lost_pet_hazard_and_unknown_reports', () => {
 test('report_hints_and_questions_for_lost_pet_and_hazard', () => {
   assert.equal(reportActionHint(lostReport(), 'dismiss'), 'Closes the report. The alert stays as it is and nobody is notified. Needs the note.');
   assert.equal(reportActionHint(hazardReport(), 'dismiss'), 'Closes the report. The hazard stays as it is and nobody is notified. Needs the note.');
+  assert.equal(reportActionHint(lostReport(), 'take_down'),
+    'Ends the alert at once: its area and note are hidden from everyone but its owner. Needs the reason, not the note.');
+  assert.equal(reportActionHint(hazardReport(), 'take_down'),
+    'Removes the hazard: its point, note and photo are hidden from everyone but whoever posted it. Needs the reason, not the note.');
+  assert.equal(reportActionHint(serviceReport(), 'take_down'),
+    'Sets it to Removed: pet parents can’t find or book it. Bookings already made go ahead.');
   assert.equal(handleConfirmText(lostReport(), 'dismiss', '', { rows: [lostReport()], total: 1 }),
     'Dismiss this report about the lost-pet alert for Pip (De Pijp)? Nothing changes and nobody is notified.');
   assert.equal(handleConfirmText(hazardReport(), 'dismiss', '', { rows: [hazardReport()], total: 1 }),
@@ -2583,9 +2636,47 @@ test('report_hints_and_questions_for_lost_pet_and_hazard', () => {
   assert.equal(handleConfirmText(hazardReport(), 'dismiss', '', { rows: [hazardReport(), other], total: 2 }),
     'Dismiss this report about the hazard “Suspected poison” (Vondelpark)? Nothing changes and nobody is notified. '
     + 'This also dismisses 1 other open report on this hazard: Scam or fraud (Noor). They are saved with your note.');
-  // A take-down or a hide isn't a question for them, nor is anything for an unknown type.
-  assert.equal(handleConfirmText(lostReport(), 'take_down', 'A fine reason.'), '');
+  // A take-down: what happens, who reads the reason (quoted), and the other reports it closes (saved with the reason).
+  assert.equal(handleConfirmText(lostReport(), 'take_down', '  Not a real alert.  ', { rows: [lostReport()], total: 1 }),
+    'Take down the lost-pet alert for Pip (De Pijp)? It is set to Removed and ends at once: its area and note are hidden from everyone but its owner. '
+    + `${takeDownPlaceNotice(lostReport())} It reads: “Not a real alert.”`);
+  assert.equal(handleConfirmText(hazardReport(), 'take_down', 'Not a hazard.', { rows: [hazardReport(), other], total: 2 }),
+    'Take down the hazard “Suspected poison” (Vondelpark)? It is set to Removed: its point, note and photo are hidden from everyone but whoever posted it. '
+    + `${takeDownPlaceNotice(hazardReport())} It reads: “Not a hazard.” `
+    + 'This also closes 1 other open report on this hazard: Scam or fraud (Noor). They are saved with your reason.');
+  assert.match(takeDownPlaceNotice(lostReport()), /No notification is sent/);
+  assert.equal(takeDownPlaceNotice(serviceReport()), '');
+  // Not offered: no question.
+  assert.equal(handleConfirmText(lostReport({ target: null }), 'take_down', 'A fine reason.'), '');
+  assert.equal(handleConfirmText(lostReport(), 'hide_review', ''), '');
   assert.equal(handleConfirmText(strangeReport(), 'dismiss'), '');
+});
+
+test('handled_text_for_a_taken_down_lost_pet_or_hazard', () => {
+  // admin_take_down_*: {alert|hazard: the public view, handled_count}, no report.
+  const lostAnswer = (over = {}, count = 1) => ({ alert: { id: 'alert-1', status: 'removed', ...over }, handled_count: count });
+  const hazardAnswer = (over = {}, count = 1) => ({ hazard: { id: 'haz-1', status: 'removed', ...over }, handled_count: count });
+  assert.equal(handledText(lostAnswer(), lostReport(), 'take_down'), 'The lost-pet alert for Pip is taken down: it is now Removed.');
+  assert.equal(handledText(hazardAnswer(), hazardReport(), 'take_down'), '“Suspected poison” is taken down: it is now Removed.');
+  // handled_count counts this report: the rest were on the same alert or hazard.
+  assert.equal(handledText(lostAnswer({}, 2), lostReport(), 'take_down'),
+    'The lost-pet alert for Pip is taken down: it is now Removed. 1 other report on the same alert was closed with it.');
+  assert.equal(handledText(hazardAnswer({}, 4), hazardReport(), 'take_down'),
+    '“Suspected poison” is taken down: it is now Removed. 3 other reports on the same hazard were closed with it.');
+  assert.equal(handledText(hazardAnswer({}, 0), hazardReport(), 'take_down'),
+    '“Suspected poison” is taken down: it is now Removed. No open report was left to close.');
+  // Believed only from the answer: this target, removed, and a count that is a whole number.
+  for (const bad of [null, undefined, 'x', {}, { handled_count: 1 }, lostAnswer({ id: 'alert-2' }), lostAnswer({ status: 'active' }),
+    lostAnswer({ id: null }), lostAnswer({}, -1), lostAnswer({}, 1.5), lostAnswer({}, '2'), lostAnswer({}, null), hazardAnswer(),
+    { alert: lostAnswer().alert }]) {
+    assert.equal(handledText(bad, lostReport(), 'take_down'), null, JSON.stringify(bad));
+  }
+  // The answer of the other RPC (a hazard's view for an alert's report) doesn't count, nor does a deleted target.
+  assert.equal(handledText(hazardAnswer(), lostReport(), 'take_down'), null);
+  assert.equal(handledText(lostAnswer(), lostReport({ target: null }), 'take_down'), null);
+  assert.equal(handledText(lostAnswer(), lostReport({ target: { ...lostReport().target, status: 'removed' } }), 'take_down'), null);
+  // A report answer is not a take-down answer.
+  assert.equal(handledText({ report: { ...lostReport(), handled: { at: '2026-10-25T09:00:00Z', action: 'service_removed', note: 'x' } }, handled_count: 1 }, lostReport(), 'take_down'), null);
 });
 
 test('handled_text_for_a_dismissed_lost_pet_or_hazard_report', () => {
@@ -2599,7 +2690,6 @@ test('handled_text_for_a_dismissed_lost_pet_or_hazard_report', () => {
     'Report dismissed. Nothing changed. 1 other report on the same alert was closed with it.');
   // Believed only when the report is this one and was dismissed; a take-down isn't claimed for them.
   assert.equal(handledText(answer(hazardReport({ id: 'other' })), hazardReport(), 'dismiss'), null);
-  assert.equal(handledText(answer(hazardReport()), hazardReport(), 'take_down'), null);
   assert.equal(handledText({ report: hazardReport(), handled_count: 1 }, hazardReport(), 'dismiss'), null);
   // The hidden flags are a review's and a reply's: never read off an alert or a hazard.
   assert.equal(reportHidden(lostReport()).review, false);

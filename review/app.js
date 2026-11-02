@@ -11,10 +11,10 @@ import {
   reverseConfirmText, reverseLabel, saveErrorText, savedText, sortPros, stateText, strayPaymentNotes,
   strayPayments, stripeTypeNote, suggestedRefund, transferLabel, validateDecision, validateNote,
   verificationBadges, waitedFor, waitingTexts, whenLabel,
-  NOT_CONFIRMED, TAKE_DOWN_NOTIFIED, handleArgs, handleConfirmText, handleErrorText, handleRefusalIsStale,
+  NOT_CONFIRMED, TAKE_DOWN_NOTIFIED, handleCall, handleConfirmText, handleErrorText, handleRefusalIsStale,
   handledText, handlingProblem, reportActionHint, reportActionLabel, reportActions, reportFromLine, reportHidden,
   reportList, reportNoticeShown, reportPlace, reportReasonSentence, reportReviewTitle, reportRowText, reportTargetState,
-  reportWaiting,
+  reportWaiting, takeDownPlaceNotice,
 } from '/review/lib.js';
 
 // Applicants choose their avatar URL (the database only checks for https), so
@@ -1606,13 +1606,13 @@ async function finishCaseAction(id, token, meta, { data, error }) {
 // ---------------------------------------------------------------------------
 // Reports (R11): reports about services, reviews, the replies under them, lost-pet alerts and hazards. A report
 // closes with one of four actions, each with the team's note; the server also closes every other open report on
-// the same target. Lost-pet alert and hazard reports are dismissed only; a type this page doesn't know is a row
-// with no action.
+// the same target. Lost-pet alert and hazard reports are dismissed, or the alert or hazard is taken down (its own
+// RPC, with a reason); a type this page doesn't know is a row with no action.
 // The names, titles and texts come from users: textContent only, as everywhere else on this page.
 // ---------------------------------------------------------------------------
 
 const REPORTS_INTRO = 'Reports about services, reviews, replies, lost-pet alerts and hazards. Every action closes the report and is saved with your note.';
-const REPORTS_FOOTNOTE = 'Review reports show Dismiss and Hide review; reply reports show Dismiss and Hide reply; lost-pet alert and hazard reports show Dismiss only. User, post, message and comment reports stay where they are today.';
+const REPORTS_FOOTNOTE = 'Review reports show Dismiss and Hide review; reply reports show Dismiss and Hide reply; lost-pet alert and hazard reports show Dismiss and Take down. User, post, message and comment reports stay where they are today.';
 const SAVING = 'Saving… please wait. Don’t close this page.';
 
 const objectOf = (v) => (v !== null && typeof v === 'object' && !Array.isArray(v) ? v : null);
@@ -1746,7 +1746,7 @@ function reportDecision(item) {
   const optionRow = (className, ...children) => el('div', { className: `option ${className}`.trim() }, ...children);
   const hint = (action) => el('span', { className: 'hint', textContent: reportActionHint(item, action) });
   const button = (action, className) => {
-    const b = el('button', { type: 'button', className: `btn ${className}`, textContent: reportActionLabel(action), disabled: busy });
+    const b = el('button', { type: 'button', className: `btn ${className}`, textContent: reportActionLabel(action, item), disabled: busy });
     b.onclick = () => decideReport(item, action, b, note, reason, formError, saving);
     return b;
   };
@@ -1758,9 +1758,10 @@ function reportDecision(item) {
   for (const action of actions) {
     if (action === 'dismiss') box.append(optionRow('', button(action, 'outline'), hint(action)));
     else if (action === 'take_down') {
+      const place = item.target_type === 'lost_pet_alert' || item.target_type === 'hazard';
       box.append(optionRow('suggested', button(action, ''), hint(action),
-        el('label', { className: 'stack' }, 'Reason for the pro (required)', reason),
-        el('span', { className: 'notified wide', textContent: TAKE_DOWN_NOTIFIED })));
+        el('label', { className: 'stack' }, place ? 'Reason (required)' : 'Reason for the pro (required)', reason),
+        el('span', { className: 'notified wide', textContent: place ? takeDownPlaceNotice(item) : TAKE_DOWN_NOTIFIED })));
     } else box.append(optionRow('', button(action, 'navy'), hint(action)));
   }
   box.append(saving);
@@ -1782,15 +1783,15 @@ function decideReport(item, action, button, note, reason, formError, saving) {
   }
   formError.textContent = '';
   if (!confirm(handleConfirmText(item, action, reason.value, { rows, total: reportTotal }))) return;
-  const args = handleArgs(item, action, note.value, reason.value); // handlingProblem passed; never send a guess
-  if (!args) {
+  const call = handleCall(item, action, note.value, reason.value); // handlingProblem passed; never send a guess
+  if (!call) {
     formError.textContent = 'Couldn’t send: this report can’t be handled from here.';
     return;
   }
   const token = requests.start(id);
   if (token === null) return; // a request for this report is already on its way
   saving.textContent = SAVING;
-  act('admin_handle_report', args, button, (result) => finishReportAction(item, action, token, result));
+  act(call.fn, call.args, button, (result) => finishReportAction(item, action, token, result));
 }
 
 // What to do with the answer. An answer that no request is waiting for (the reviewer signed out meanwhile) is

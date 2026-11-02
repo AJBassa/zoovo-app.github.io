@@ -1322,6 +1322,16 @@ export function reportPlace(item) {
   return { ...common, title: type ? upperFirst(type) : null, place: trimmed(t?.park_name) };
 }
 
+// Whether `item` is a lost-pet alert or hazard report whose target can still be taken down: the alert or
+// hazard is there (with its id) and isn't removed. Taking one down is its own call
+// (admin_take_down_lost_alert / admin_take_down_hazard), not an action of admin_handle_report; it is refused
+// (not_eligible) for one that is removed already. A row without the `target` key says nothing: it may be.
+function placeTakeDownOpen(item) {
+  if (item.target_type !== 'lost_pet_alert' && item.target_type !== 'hazard') return false;
+  if (!Object.hasOwn(item, 'target')) return true;
+  return isObject(item.target) && trimmed(item.target.id) !== null && item.target.status !== 'removed';
+}
+
 // The names in a target. null parts are the ones the database no longer has. `subject` is the first name of the
 // person a pro's review is about; `direction` is 'customer_to_pro' (a pet parent's review of a pro, on the
 // service page and in the pro's rating), 'pro_to_customer' (a pro's review of a pet parent, in the pet parent's
@@ -1468,15 +1478,14 @@ export function reportHidden(item) {
 // (while the review isn't hidden), a reply dismiss and hide reply (while there is a reply that isn't hidden).
 // The server refuses an action on a target that is gone or already in that state (not_eligible), so when the
 // item says what the target is now (it has the `target` key) only dismiss is left for those; a row without the
-// key says nothing about it and gets the target's own list. A lost-pet alert or hazard report is only ever
-// dismissed here: admin_handle_report refuses the other actions on them (not_eligible), and taking the alert or
-// hazard down is another call (admin_take_down_lost_alert, admin_take_down_hazard) this tab doesn't make. []
-// for a report that is handled, of a type this tab doesn't handle (the server would refuse any action), or that
-// this tab doesn't take.
+// key says nothing about it and gets the target's own list. A lost-pet alert or hazard report gets dismiss and
+// take down while the alert or hazard is there and not removed (admin_handle_report only dismisses them; the
+// take-down is the alert's or hazard's own RPC, see handleCall). [] for a report that is handled, of a type this
+// tab doesn't handle (the server would refuse any action), or that this tab doesn't take.
 export function reportActions(item) {
   if (reportKind(item) === null || isObject(item.handled)) return [];
   const only = ['dismiss'];
-  if (item.target_type === 'lost_pet_alert' || item.target_type === 'hazard') return only;
+  if (item.target_type === 'lost_pet_alert' || item.target_type === 'hazard') return placeTakeDownOpen(item) ? [...only, 'take_down'] : only;
   if (!Object.hasOwn(REPORT_KINDS, item.target_type)) return [];
   if (!Object.hasOwn(item, 'target')) {
     return ['dismiss', { service: 'take_down', review: 'hide_review', review_reply: 'hide_reply' }[item.target_type]];
@@ -1501,8 +1510,9 @@ export function reportTargetState(item) {
   if (info === GENERIC_REPORT_KIND) return `This tab doesn’t handle “${trimmed(item.target_type) ?? 'blank'}” reports, so there is nothing to do here.`;
   if (item.target_type === 'lost_pet_alert' || item.target_type === 'hazard') {
     const what = item.target_type === 'hazard' ? 'hazard' : 'lost-pet alert';
-    return isObject(item.target)
-      ? `A ${what} report can only be dismissed from this tab. Taking the ${what} down isn’t done here.`
+    if (!Object.hasOwn(item, 'target') || placeTakeDownOpen(item)) return null;
+    return isObject(item.target) && item.target.status === 'removed'
+      ? `This ${what} is removed already, so the report can only be dismissed.`
       : `This ${what} has been deleted, so the report can only be dismissed.`;
   }
   if (!Object.hasOwn(item, 'target')) return null;
@@ -1527,9 +1537,21 @@ const REPORT_ACTION_LABELS = {
   dismiss: 'Dismiss', take_down: 'Take the service down', hide_review: 'Hide review', hide_reply: 'Hide reply',
 };
 
-// The button's words ('' for an action this tab doesn't have).
-export function reportActionLabel(action) {
+// The button's words ('' for an action this tab doesn't have). With the report, a take-down says what it takes
+// down.
+export function reportActionLabel(action, item) {
+  if (action === 'take_down' && item?.target_type === 'lost_pet_alert') return 'Take the alert down';
+  if (action === 'take_down' && item?.target_type === 'hazard') return 'Take the hazard down';
   return typeof action === 'string' && Object.hasOwn(REPORT_ACTION_LABELS, action) ? REPORT_ACTION_LABELS[action] : '';
+}
+
+// Under a lost-pet alert's or hazard's take-down: who reads the reason. The reason is also saved as the note on
+// every open report it closes (the RPC has no separate note). The owner of an alert, and whoever posted a
+// hazard, see removed_reason in the app; the RPC sends no notification.
+export function takeDownPlaceNotice(item) {
+  if (item?.target_type === 'lost_pet_alert') return 'The owner sees your reason on the alert in the app. No notification is sent. It is also saved as the note on this report and the others it closes.';
+  if (item?.target_type === 'hazard') return 'Whoever posted it sees your reason on the hazard in the app. No notification is sent. It is also saved as the note on this report and the others it closes.';
+  return '';
 }
 
 // Under a take-down's reason, and in its question. The pro reads the reason on the service in the app
@@ -1554,6 +1576,8 @@ export function reportActionHint(item, action) {
         ? `Closes the report. The service stays ${t.status} and nobody is notified.`
         : 'Closes the report. Nobody is notified.';
     case 'take_down':
+      if (item.target_type === 'lost_pet_alert') return 'Ends the alert at once: its area and note are hidden from everyone but its owner. Needs the reason, not the note.';
+      if (item.target_type === 'hazard') return 'Removes the hazard: its point, note and photo are hidden from everyone but whoever posted it. Needs the reason, not the note.';
       return 'Sets it to Removed: pet parents can’t find or book it. Bookings already made go ahead.';
     case 'hide_review':
       if (direction === 'pro_to_customer') {
@@ -1582,6 +1606,11 @@ function textProblem(text, subject) {
 // needs a second text, the reason the pro reads; no other action looks at one. The note is checked first.
 export function handlingProblem(item, action, note, reason) {
   if (!reportActions(item).includes(action)) return { field: 'action', text: 'That action isn’t available for this report.' };
+  if (action === 'take_down' && placeTakeDownOpen(item)) {
+    // The alert's and the hazard's RPCs take one text, the reason; it becomes the note on the reports they close.
+    const problem = textProblem(reason, 'The reason');
+    return problem === null ? null : { field: 'reason', text: problem };
+  }
   const noteProblem = textProblem(note, 'The note');
   if (noteProblem !== null) return { field: 'note', text: noteProblem };
   const reasonProblem = action === 'take_down' ? textProblem(reason, 'The reason for the pro') : null;
@@ -1597,10 +1626,28 @@ export function validateHandling(item, action, note, reason) {
 // (trimmed, for a take-down; null for every other action, which the server refuses a reason for). null when
 // validateHandling would refuse it: then nothing may be sent.
 export function handleArgs(item, action, note, reason) {
+  if (action === 'take_down' && placeTakeDownOpen(item)) return null; // its own call: handleCall
   if (validateHandling(item, action, note, reason) !== null) return null;
   return {
     p_report_id: item.id, p_action: action, p_note: note.trim(), p_reason: action === 'take_down' ? reason.trim() : null,
   };
+}
+
+// The call that carries out an action: {fn, args}, or null when validateHandling would refuse it (then nothing
+// may be sent). Every action is admin_handle_report, except taking a lost-pet alert or a hazard down: that is
+// admin_take_down_lost_alert(p_alert_id, p_reason) or admin_take_down_hazard(p_hazard_id, p_reason) on the
+// target's id, with the reason (5 to 1000 characters, trimmed). Those close every open report on the target.
+export function handleCall(item, action, note, reason) {
+  if (validateHandling(item, action, note, reason) !== null) return null;
+  if (action === 'take_down' && placeTakeDownOpen(item)) {
+    const id = trimmed(item.target?.id);
+    if (id === null) return null;
+    return item.target_type === 'hazard'
+      ? { fn: 'admin_take_down_hazard', args: { p_hazard_id: id, p_reason: reason.trim() } }
+      : { fn: 'admin_take_down_lost_alert', args: { p_alert_id: id, p_reason: reason.trim() } };
+  }
+  const args = handleArgs(item, action, note, reason);
+  return args === null ? null : { fn: 'admin_handle_report', args };
 }
 
 // The other open reports the server closes with this one: it handles every open report on the same target, the
@@ -1621,7 +1668,7 @@ const OTHERS_NAMED = 5;
 // or reply, and which ones (the reason and who reported; the first OTHERS_NAMED, then "and N more"). `open` is
 // {rows, total}: the reports loaded and how many are open in all. With more open than loaded the count is "at
 // least". '' when there is no target, or no other report to name and no more to find.
-function closedWithText(item, action, open) {
+function closedWithText(item, action, open, savedWith = 'your note') {
   if (!isObject(item.target)) return '';
   const rows = Array.isArray(open?.rows) ? open.rows : [];
   const cut = Number.isSafeInteger(open?.total) && open.total > rows.length;
@@ -1634,7 +1681,7 @@ function closedWithText(item, action, open) {
   });
   const count = `${cut ? 'at least ' : ''}${others.length === 1 ? '1 other open report' : `${others.length} other open reports`}`;
   const more = names.length > OTHERS_NAMED ? ` and ${names.length - OTHERS_NAMED} more` : '';
-  return `This also ${action === 'dismiss' ? 'dismisses' : 'closes'} ${count} on this ${noun}: ${names.slice(0, OTHERS_NAMED).join(', ')}${more}. They are saved with your note.`;
+  return `This also ${action === 'dismiss' ? 'dismisses' : 'closes'} ${count} on this ${noun}: ${names.slice(0, OTHERS_NAMED).join(', ')}${more}. They are saved with ${savedWith}.`;
 }
 
 const sentences = (...parts) => parts.filter(Boolean).join(' ');
@@ -1659,9 +1706,18 @@ export function handleConfirmText(item, action, reason, open) {
   const { t, direction, author, pro, title, subject } = parts;
   const theirs = possessive(pro, 'the pro’s');
   const authors = possessive(author, 'a former member’s');
-  const closes = closedWithText(item, action, open);
+  const closes = closedWithText(item, action, open, action === 'take_down' && item.target_type !== 'service' ? 'your reason' : 'your note');
   switch (action) {
     case 'take_down':
+      if (item.target_type === 'lost_pet_alert' || item.target_type === 'hazard') {
+        const gone = item.target_type === 'hazard'
+          ? 'It is set to Removed: its point, note and photo are hidden from everyone but whoever posted it.'
+          : 'It is set to Removed and ends at once: its area and note are hidden from everyone but its owner.';
+        return sentences(
+          `Take down ${placePhrase(item, reportPlace(item))}? ${gone}`,
+          `${takeDownPlaceNotice(item)} It reads: “${typeof reason === 'string' ? reason.trim() : ''}”`,
+          closes);
+      }
       return sentences(
         `Take down ${serviceName(title)}${pro ? ` (${pro})` : ''}? It is set to Removed: pet parents can’t find or book it, and bookings already made go ahead.`,
         `${TAKE_DOWN_NOTIFIED} It reads: “${typeof reason === 'string' ? reason.trim() : ''}”`,
@@ -1691,6 +1747,24 @@ export function handleConfirmText(item, action, reason, open) {
   }
 }
 
+// The banner after admin_take_down_lost_alert / admin_take_down_hazard, which answer {alert|hazard: the public
+// view, handled_count} (no report). Believed only when the view is this report's target and is removed;
+// handled_count is how many open reports it closed (this one among them), a whole number. null otherwise.
+function takenDownText(answer, item, info) {
+  const hazard = item.target_type === 'hazard';
+  const view = answer[hazard ? 'hazard' : 'alert'];
+  const place = reportPlace(item);
+  if (!isObject(view) || place.gone || trimmed(view.id) === null || view.id !== item.target.id || view.status !== 'removed') return null;
+  if (!Number.isSafeInteger(answer.handled_count) || answer.handled_count < 0) return null;
+  const said = hazard
+    ? `${place.title ? `“${place.title}”` : 'The hazard'} is taken down: it is now Removed.`
+    : `The lost-pet alert for ${place.title} is taken down: it is now Removed.`;
+  const others = answer.handled_count - 1;
+  if (answer.handled_count === 0) return `${said} No open report was left to close.`;
+  if (others < 1) return said;
+  return `${said} ${others === 1 ? '1 other report' : `${others} other reports`} on the same ${info.noun} ${others === 1 ? 'was' : 'were'} closed with it.`;
+}
+
 const HANDLED_ACTIONS = {
   dismiss: 'dismissed', take_down: 'service_removed', hide_review: 'review_hidden', hide_reply: 'reply_hidden',
 };
@@ -1703,6 +1777,7 @@ const HANDLED_ACTIONS = {
 export function handledText(answer, item, action) {
   const info = reportKind(item);
   if (info === null || typeof action !== 'string' || !Object.hasOwn(HANDLED_ACTIONS, action) || !isObject(answer)) return null;
+  if (action === 'take_down' && placeTakeDownOpen(item)) return takenDownText(answer, item, info);
   const report = answer.report;
   const done = isObject(report) ? report.handled : null;
   if (!isObject(done) || report.id !== item.id) return null;
