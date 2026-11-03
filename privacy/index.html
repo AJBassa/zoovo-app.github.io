@@ -15,32 +15,42 @@ a{color:var(--coral)}
 strong{color:var(--navy)}
 ul{padding-left:22px}
 li{margin:4px 0}
+.table{overflow-x:auto;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{border:1px solid #e8edf2;padding:8px 10px;text-align:left;vertical-align:top}
+th{background:#f0f4f8;color:var(--navy)}
 .muted{color:var(--muted);font-size:13px}
 footer{color:var(--muted);font-size:13px;margin-top:48px;border-top:1px solid #e8edf2;padding-top:16px}
 </style></head>
 <body><header><div class="wrap"><a href="/">ZOOVO</a></div></header>
 <main class="wrap"><h1>Zoovo Privacy Policy</h1>
-<p><strong>Last updated: 2026-10-07</strong></p>
+<p><strong>Last updated: 3 November 2026</strong></p>
 <p>This Privacy Policy explains what information Zoovo collects, how we use it, and the choices you have. Zoovo is a social network for pets and their people. By creating an account or using the app, you agree to the practices described here.</p>
 <p><strong>Data controller: Zoovo B.V. (Netherlands)</strong></p>
 <p>If you have any questions about this policy or your data, contact us at <strong>info@zoovo.eu</strong>.</p>
 <h2>1. Who we are</h2>
-<p>Zoovo is a mobile application that lets pet owners create profiles for themselves and their pets, share posts (photos and videos), comment, send direct messages, and discover other pet owners nearby. The app is built on Flutter and uses <a href="https://supabase.com">Supabase</a> for our backend, database, authentication, and file storage.</p>
+<p>Zoovo is a mobile application that lets pet owners create profiles for themselves and their pets, share posts (photos and videos), comment, send direct messages, and discover other pet owners nearby. You can also book pet care from professionals (&quot;pros&quot;), offer your own services as a pro, keep a health book for your pets, and use neighbourhood features such as lost-pet alerts and hazard reports. The app is built on Flutter and uses <a href="https://supabase.com">Supabase</a> for our backend, database, authentication, and file storage. Payments and payouts are processed by <a href="https://stripe.com">Stripe</a>.</p>
 <h2>2. Information we collect</h2>
 <p>We only collect the information we need to run the service.</p>
 <h3>Information you give us</h3>
 <ul>
-<li><strong>Account details</strong> — your email address and password (passwords are stored in hashed form by our authentication provider; we never see your plain-text password).</li>
+<li><strong>Account details</strong> — your email address and password (passwords are stored in hashed form by our authentication provider; we never see your plain-text password). If you sign in with Apple or Google, we receive the details they share with us, such as your email address, instead of a password.</li>
 <li><strong>Profile information</strong> — your name, city, and profile photos.</li>
 <li><strong>Pets</strong> — details about your pets, such as their name, species, photos, and other information you choose to add.</li>
 <li><strong>Content you create</strong> — posts, photos, videos, captions, and comments.</li>
 <li><strong>Direct messages</strong> — the content of messages you send to and receive from other users.</li>
+<li><strong>Bookings and payments</strong> — the bookings you make or receive, reviews, problem reports, and the payment references Stripe gives us. See Section 6.</li>
+<li><strong>Pro profile</strong> — if you offer services as a pro, your pro profile, documents and payout status. See Section 7.</li>
+<li><strong>Pet health book</strong> — health information you choose to record about your pets. See Section 6.</li>
+<li><strong>Lost-pet alerts, hazard reports, pack walks and invites</strong> — what you enter when you use these features. See Section 6.</li>
 </ul>
 <h3>Information we collect automatically</h3>
 <ul>
 <li><strong>Approximate location</strong> — to help you find pet owners and content nearby, we use a coarse location expressed only as approximate distance bands (for example, &quot;within 5 km&quot;). <strong>Your exact location is never shared with other users</strong> — only coarse distance bands are shown. See Section 5 for details.</li>
 <li><strong>Device push tokens</strong> — if you enable notifications, we store a device token so we can deliver push notifications to you. Notifications are delivered through Google Firebase Cloud Messaging and Apple Push Notification service.</li>
-<li><strong>App usage and diagnostics</strong> — we use Google Firebase Analytics to understand how the app is used, for example which screens are opened and when posts, playdates, or messages are created. This includes an app-instance identifier, your device model and operating system, and the actions you take in the app — never the content of your posts or messages. We don&#39;t show ads, and we don&#39;t use this data to track you across other companies&#39; apps or websites.</li>
+<li><strong>App usage and diagnostics</strong> — we use Google Firebase Analytics to understand how the app is used, for example which screens are opened and when posts, playdates, or messages are created. This includes an app-instance identifier, your device model and operating system, and the actions you take in the app — never the content of your posts or messages. We don&#39;t show ads, Google&#39;s advertising features are switched off, and we don&#39;t use this data to track you across other companies&#39; apps or websites. You can stop sending usage statistics at any time in <strong>Settings → Privacy → Share usage statistics</strong>.</li>
+<li><strong>Crash reports</strong> — if the app crashes or hits an error nothing else handled, it sends a crash report to Google Firebase Crashlytics. A report contains the error message and where in the app&#39;s code it happened, technical details about your device and the app at that moment (such as the device model, operating system and app version), and your Zoovo user ID, which is a random identifier, never your name or email address. For errors returned by our servers, only the type of error and its code are sent. Crash reports are only sent from released versions of the app (currently the iPhone app), never from development builds. We rely on our legitimate interest in keeping the app stable and secure. There is no switch in the app to turn crash reporting off. Google keeps crash reports for up to 90 days.</li>
+<li><strong>Service page views</strong> — when you open a pro&#39;s service page while signed in, we record that you viewed it, once per day, so the pro can see how many people viewed their page. Pros only ever see counts, never who viewed. These records are deleted after 13 months.</li>
 </ul>
 <h2>3. How we use your information</h2>
 <p>We use the information above to:</p>
@@ -49,39 +59,183 @@ footer{color:var(--muted);font-size:13px;margin-top:48px;border-top:1px solid #e
 <li>show your profile, pets, posts, and comments to other users as you direct;</li>
 <li>deliver direct messages between you and other users;</li>
 <li>show you relevant nearby content and people using coarse distance bands;</li>
-<li>send push notifications you have opted into;</li>
-<li>understand how the app is used so we can fix problems and improve it;</li>
-<li>keep Zoovo safe — including moderating content, responding to reports, and removing objectionable content or abusive users (see our Terms of Service);</li>
+<li>arrange bookings between customers and pros, take payments for them, including the weekly charges you agreed to, and pay pros;</li>
+<li>send push notifications you have opted into, including lost-pet and hazard alerts near your home and reminders about your pets&#39; vaccinations and birthdays, and send emails about your bookings and your pro account;</li>
+<li>understand how the app is used, and find and fix crashes, so we can fix problems and improve it;</li>
+<li>keep Zoovo safe — including moderating content, responding to reports, removing objectionable content or abusive users (see our Terms of Service), and limiting how often alerts can be sent so they can&#39;t be misused;</li>
 <li>comply with our legal obligations.</li>
 </ul>
 <p>We do <strong>not</strong> sell your personal information.</p>
+<h3>Legal bases</h3>
+<p>Under the GDPR (Article 6(1)), we need a legal basis for each use of your data. These are the main ones:</p>
+<div class="table"><table>
+<thead><tr><th>Purpose</th><th>Legal basis</th></tr></thead>
+<tbody>
+<tr><td>Your account, profile, pets, posts, comments and messages; nearby features, parks, pack walks and &quot;Your street&quot;; publishing your lost-pet alerts and hazard reports</td><td>Contract: providing the service you signed up for</td></tr>
+<tr><td>Bookings and payments, report cards, reviews, problem reports and booking emails; pro applications and payouts</td><td>Contract</td></tr>
+<tr><td>Saving your card and charging it before each weekly visit</td><td>Consent, which you give at checkout. You can stop the charges by cancelling the weekly series.</td></tr>
+<tr><td>Sharing care info with a pro, and the vaccinated badge</td><td>Consent: both are off unless you switch them on, and you can switch them off at any time</td></tr>
+<tr><td>Push notifications, including lost-pet and hazard alerts and pet reminders</td><td>Consent: you allow notifications on your phone, and you can switch each kind off</td></tr>
+<tr><td>Crash reports</td><td>Legitimate interest: keeping the app stable and secure</td></tr>
+<tr><td>Usage analytics</td><td>Legitimate interest: understanding how the app is used so we can improve it. You can object at any time with the switch in Settings → Privacy</td></tr>
+<tr><td>Safety and moderation: handling reports, knowing who made a hazard report, limits on alerts, the team&#39;s access to health books for support and safety, and keeping ended alerts and hazard reports</td><td>Legitimate interest: keeping Zoovo and its users safe</td></tr>
+<tr><td>Invite records</td><td>Legitimate interest: counting invitations and preventing abuse</td></tr>
+<tr><td>&quot;Show my bookings to friends&quot; and service page view counts</td><td>Legitimate interest: helping people choose a pro, and showing pros how their pages do. You can switch the first off.</td></tr>
+<tr><td>Keeping report-card photos after a customer deletes their account</td><td>Legitimate interest: defending payment claims</td></tr>
+<tr><td>Keeping booking and payment records after the booking</td><td>Legal obligation: Dutch tax law (article 52 of the General Tax Act, the AWR)</td></tr>
+</tbody>
+</table></div>
+<p>Where we rely on legitimate interest, you can object (see Section 13).</p>
 <h2>4. Where your data is stored</h2>
-<p>Your account data, profile, pets, posts, comments, and messages are stored in our Supabase project database. Photos and videos you upload are kept in Supabase image and file storage. Data may be processed on servers operated by our infrastructure providers. We apply access controls so that data is only accessible as needed to operate the service.</p>
+<p>Your account data, profile, pets, posts, comments, and messages are stored in our database, hosted by Supabase. Photos and videos you upload are kept in Supabase file storage. Report-card photos, pet health booklet photos, hazard report photos and pros&#39; documents are kept in private storage that only the people described in Sections 6 and 7 can open. Your card details are held by Stripe, not by Zoovo. Data may be processed on servers operated by our infrastructure providers; Section 9 explains transfers outside the European Economic Area. We apply access controls so that data is only accessible as needed to operate the service.</p>
 <h2>5. Location and how it is shared</h2>
 <p>Zoovo is location-aware so you can connect with nearby pet owners. To protect your privacy:</p>
 <ul>
 <li>We convert your location into <strong>coarse distance bands</strong> before it is shown to anyone.</li>
-<li><strong>We never share your precise GPS coordinates or exact address with other users.</strong></li>
-<li>Other users only ever see an approximate distance (a band), never a pinpoint.</li>
+<li><strong>We never share your precise GPS coordinates or exact address with other users.</strong> The one exception is a booking at your home: the pro you booked sees the address you gave for that booking.</li>
+<li>Other users only ever see an approximate distance to you (a band), never a pinpoint.</li>
+<li>Some features let you pick a point on the map and publish it: the last-seen point of a lost-pet alert, and the location of a hazard report. Other users see that point rounded to about 300 m (lost-pet alerts) or about 50 m (hazard reports). Only you see the exact point you picked. See Section 6.</li>
+<li>We use your primary place (usually your home) on our servers to decide whether a lost-pet or hazard alert near you should reach you, and to build your &quot;Your street&quot; summary. Your primary place is never shown to other users.</li>
+<li>To turn a point into an address or a place name (for your places, a booking address, or the area of a lost-pet alert), the app uses your phone&#39;s geocoding service, which receives the point or the address: on iPhone, Apple&#39;s; on Android, the phone&#39;s built-in geocoder, which is usually provided by Google. When you type an address or a city, the app also looks it up with Photon, an address search service run by komoot in Germany.</li>
 </ul>
-<h2>6. Sharing your information</h2>
-<p>Other Zoovo users can see the content you choose to make visible — your profile, pets, posts, comments, and the approximate distance bands described above. Direct messages are visible only to you and the people in the conversation.</p>
-<p>We may share information with service providers strictly to operate the app — Supabase (backend, database, authentication, and file storage) and Google Firebase (usage analytics and push notification delivery) — and where required by law or to protect the rights and safety of our users.</p>
-<h2>7. Data retention</h2>
-<p>We keep your information for as long as your account is active. When you delete your account (see Section 8), we delete your account and the associated data — including your profile, pets, posts, comments, and messages — except where we are required to retain certain records to comply with the law or to resolve disputes. Backups are purged on a rolling schedule.</p>
-<h2>8. Deleting your account</h2>
+<h2>6. Bookings, pet health and neighbourhood features</h2>
+<p>This section explains what some features collect and who can see it.</p>
+<h3>Bookings and payments</h3>
+<ul>
+<li>When you book a pro, we store the booking: the service, the date and time, the pets, your instructions and, for a visit at your home, your address. The pro sees the address of a booking at your home while the booking is confirmed or completed.</li>
+<li>Payments are processed by Stripe. You enter your card details in Stripe&#39;s payment form, and Zoovo does not receive your card number. We store the references to your payments that Stripe gives us. Stripe processes payments for us as our processor. For its own legal, fraud-prevention and financial obligations, Stripe acts as an independent controller, under <a href="https://stripe.com/privacy">Stripe&#39;s privacy policy</a>.</li>
+<li><strong>Weekly bookings.</strong> If you make a booking weekly, you agree at checkout that we may charge your card 48 hours before each weekly visit (the app says &quot;We&#39;ll charge this card 48 h before each weekly visit&quot;). That is your consent, and we record the date and time you gave it. Stripe then saves your card for these charges, and each visit is charged without you having to open the app. To do this, we create a customer record for you at Stripe with your email address and your Zoovo user ID, and we store the Stripe customer ID and a reference to the saved card (not the card number). If a charge fails, we ask you to pay in the app. You can cancel a single visit or the whole weekly series.</li>
+<li><strong>Your Stripe customer record.</strong> When you delete your account, we delete the link between your Zoovo account and that customer record. The record itself stays at Stripe, which keeps payment records as its own legal obligations require.</li>
+<li><strong>Free meet-ups.</strong> Some pros offer a free meet-up of 15 or 30 minutes before you book. A meet-up is stored as a booking without a payment, and a message about it is added to your chat with the pro. For a meet-up at the pro&#39;s place, you only see the pro&#39;s area, and the pro can send you the address in the chat. We limit how many meet-ups you can book.</li>
+<li><strong>Reviews, problem reports and booking emails.</strong> After a booking, you and the pro can review each other, and either of you can report a problem. We email you when a booking is confirmed or cancelled, when a problem is resolved, and to ask for a review. Section 7 explains who sees reviews and problem reports.</li>
+</ul>
+<h3>Report cards</h3>
+<ul>
+<li>During a booking, from 30 minutes before it starts until 24 hours after it ends, the pro can send you report cards: a photo, and optionally a short note, activity tags (such as water, food or a nap) and a mood emoji. The app removes location data from the photo before it is uploaded.</li>
+<li>Report cards are private: only you, the pro of the booking and the Zoovo team can see them. The photos are kept in private storage.</li>
+<li>You can share a report card to the feed. It then becomes your own post, with the photo and your caption, and it shows which pro&#39;s service it came from (for example &quot;Walked by …&quot;). It is visible like your other posts and stays until you delete it.</li>
+<li>Report cards are part of your booking history, and are kept for as long as your account exists. If the pro deletes their account, you keep your report cards.</li>
+<li>If you delete your account, we keep the report-card photos of a paid booking until 180 days after the booking ended, and longer while a problem report or a card payment dispute about that booking is still open, because they can show that the service was delivered. We do this on the basis of our legitimate interest in defending payment claims. After that, they are deleted automatically.</li>
+</ul>
+<h3>Pet health book</h3>
+<ul>
+<li>You can keep a private health book for each of your pets: vaccinations (with an optional photo of the booklet page), the microchip number and whether it is registered, the vet&#39;s name and phone number, an emergency contact, weight entries, medication, allergies, feeding notes and a birthday.</li>
+<li>Only you can see your pets&#39; health books. Other users can&#39;t. The Zoovo team can read them, but cannot change them, and only does so for support and safety, when it is needed.</li>
+<li>The emergency contact and the vet are other people&#39;s details. Only add them if you are allowed to share them. A pro only sees them while you share care info for a booking, until 7 days after that booking ends.</li>
+<li>The app removes location data from booklet photos before they are uploaded, and they are kept in private storage.</li>
+<li><strong>Sharing care info with a pro.</strong> For each booking, you can switch on &quot;Share care info&quot; with the pro. It is off unless you switch it on. While it is on, the pro of that booking sees a read-only summary for the pets on the booking: whether their vaccinations are up to date and when the next one is due, whether a microchip is recorded (never the number), medication, allergies, feeding notes, the vet&#39;s name and phone number, and the emergency contact. The pro can see it until 7 days after the booking ends, or until you switch it off. The pro never sees the booklet photos or the weights.</li>
+<li><strong>Vaccinated badge.</strong> You can choose to show a &quot;Vaccinations up to date (owner-declared)&quot; badge on your pet&#39;s profile. It is off unless you switch it on. Other users only see the badge, never the details behind it.</li>
+<li><strong>Reminders.</strong> We remind you 30 days and 7 days before a vaccination is due, and the day before your pet&#39;s birthday. You can switch these reminders off in the app&#39;s notification settings.</li>
+<li>When you delete a pet, or your account, its health book is deleted, and its booklet photos are deleted from storage automatically, usually within minutes. When you replace or remove a booklet photo, the app deletes the old one.</li>
+</ul>
+<h3>Pack Alert (lost pets)</h3>
+<ul>
+<li>If your pet goes missing, you can report it lost. You pick the last-seen point on the map, or use your current location, and the time, and you can add a note. The app adds the name of the neighbourhood or town, which it looks up with your phone&#39;s geocoding service (Apple&#39;s on iPhone; on Android, usually Google&#39;s), which receives the point.</li>
+<li><strong>A lost-pet alert is public.</strong> Anyone with the alert&#39;s link, including people who don&#39;t use Zoovo, can see your pet&#39;s photo, name, species and breed, the neighbourhood name, when your pet was last seen and your note. In the app, signed-in users can also see the area on a map, rounded to about 300 m, and can message you about the alert. Only you see the exact point you picked. We never use your home or your saved places as the last-seen point.</li>
+<li>When you report a pet lost, we notify Zoovo users whose primary place (usually their home) is within about 2 km of the rounded point. Their places are never shown to you or anyone else. To prevent misuse, alerts from new accounts, for new pets, or far from your own home are not sent as notifications, and we limit how many alerts one person can receive. Users can switch lost-pet alerts off in their notification settings.</li>
+<li>An alert is active for 7 days, and you can renew it once for 7 more days. You can mark your pet as found or cancel the alert at any time, and the Zoovo team can remove an alert. People who tapped &quot;I&#39;m looking&quot; are told when you mark your pet as found; everyone else only sees how many people are looking.</li>
+<li>Once an alert has ended, it is no longer listed, and its area and note are no longer shown to anyone but you. Anyone who opens its link only sees that the alert has ended, or that your pet was found, with your pet&#39;s name (and photo, if found).</li>
+<li>Ended alerts, and the records of who tapped &quot;I&#39;m looking&quot;, are kept for safety and moderation until you delete the pet or your account. A person&#39;s &quot;I&#39;m looking&quot; record is also deleted when they delete their own account. Our records of who was sent an alert are deleted after 2 days.</li>
+</ul>
+<h3>Hazard reports</h3>
+<ul>
+<li>You can report a hazard, such as suspected poison, broken glass, a trap or an aggressive dog off the lead, with a point on the map, an optional note and an optional photo. The app removes location data from the photo before it is uploaded.</li>
+<li><strong>Hazard reports are anonymous to other users.</strong> They see the type of hazard, the note, the photo and the location rounded to about 50 m, but never who reported it. Only you see the exact point you picked. The Zoovo team can see who made a report, for moderation.</li>
+<li>Users whose primary place is within about 1 km are notified, with the same limits against misuse as lost-pet alerts. Users can switch hazard alerts off in their notification settings. Other users can vote on whether the hazard is still there; we never show who voted. Our records of who was sent a hazard alert are deleted after 2 days.</li>
+<li>A hazard report expires after 7 days. Ended reports are no longer shown. Other users can only see the photo while the report is active. When the 7 days are over, the photo is deleted automatically, later if a complaint about the report is still open. 30 days after a report has ended, we also delete its note and the votes on it.</li>
+<li>We keep the rest of the record of an ended report (the type of hazard, its location, its dates and who reported it) for safety and moderation. If the reporter deletes their account, the report is kept without any link to them.</li>
+</ul>
+<h3>Parks, posts tagged to a park, and pack walks</h3>
+<ul>
+<li>Park pages show upcoming playdates nearby, recent posts tagged to the park and active hazard reports. When we show you the parks near you, we use your location only to find them, and we don&#39;t store it.</li>
+<li>You can tag a post with a park. The park is then shown on the post, and the post can appear on that park&#39;s page, to the same people who can already see your posts.</li>
+<li>A pack walk is a playdate that repeats weekly. People who join become members. Members can see the other members&#39; first names and profile photos, and we send members a reminder to say whether they are coming. A pack&#39;s streak counts the weeks when at least two people came, but never shows who came.</li>
+</ul>
+<h3>Your street</h3>
+<p>The Home screen can show a summary of your area, based on your primary place: how many pets are nearby, as a range such as &quot;5–9&quot; rather than an exact number, upcoming playdates nearby, and well-rated pros near you. Only you see your summary, and it never contains coordinates. Your pets are only counted in other people&#39;s summaries if your profile and your place can be found in Nearby, and only as part of such a range.</p>
+<h3>Invites</h3>
+<p>You can invite people with your personal invite link or QR code. Your invite code is linked to your account. When someone signs up with your code, we record who invited whom. You can see how many people joined with your code, but not who they are. We also record attempts to use a code, to prevent abuse. We do this on the basis of our legitimate interest in counting invitations and preventing abuse. An invite record is deleted when either account is deleted.</p>
+<h3>Friends who booked a pro</h3>
+<p>On a pro&#39;s service page, Zoovo can show how many of your friends (your accepted connections) have completed a booking with that pro, with up to two first names. In the same way, your friends can see your first name on the page of a pro you completed a booking with. They never see which service you booked or when. Free meet-ups are not counted, and people with a private profile are never shown. The &quot;Show my bookings to friends&quot; switch is on by default. You can switch it off at any time in <strong>Profile → Settings → Privacy</strong>.</p>
+<h2>7. For professionals</h2>
+<p>If you offer services on Zoovo as a pro, this section also applies to you.</p>
+<h3>Your application</h3>
+<ul>
+<li>When you apply, we store your pro profile. Other users see the public part: your display name, bio, service area, photos, years of experience, languages and the kinds of services you offer. Your phone number, your address and its point on the map, and your business registration number (if you apply as a business) are private: only you and the Zoovo team see them. A customer only sees your address for a confirmed booking at your place.</li>
+<li>You can upload documents, such as certificates and proof of insurance. They are kept in private storage, and only you and the Zoovo team can open them. The team uses them to review your application.</li>
+<li>We email you about your application and your services, for example when they are approved or rejected.</li>
+</ul>
+<h3>Payouts and identity check (Stripe)</h3>
+<ul>
+<li>To get paid, you set up a Stripe Connect Express account. You enter your personal and bank details in Stripe&#39;s own forms, not in Zoovo. We give Stripe your email address and whether you are an individual or a company.</li>
+<li>Before you can apply, Stripe Identity checks who you are: you take a photo of your passport, ID card or driving licence and a live selfie in Stripe&#39;s own flow. Zoovo never receives these images, only the result of the check.</li>
+<li>For this onboarding and identity data (&quot;know your customer&quot; checks), Stripe acts as an independent controller: it decides how to process that data to meet its own legal obligations, under <a href="https://stripe.com/privacy">Stripe&#39;s privacy policy</a>.</li>
+<li>Zoovo stores your Stripe account ID, your payout status (whether your details are complete, whether payouts are enabled, and whether Stripe needs more information), the result of the identity check, and the last 4 digits of your bank account, which Stripe gives us so you can recognise it. Once Stripe&#39;s check has passed, your profile can show an &quot;ID verified&quot; badge.</li>
+<li><strong>Commission.</strong> Zoovo keeps a commission of 20% of the price of each booking (of the amount kept after any refund), and 15% on the later visits of a weekly series. Each booking records the rate that applied when it was made. You see it on the booking and in your earnings; customers don&#39;t.</li>
+</ul>
+<h3>Reviews, problem reports and emails</h3>
+<ul>
+<li><strong>Reviews.</strong> After a completed booking, the customer can review you and you can review the customer. Reviews of you are public on your pro pages, with the author&#39;s first name and photo, and you can reply once. Your reviews of a customer are shown to that customer and, as an average rating, to pros the customer books. Reviews can&#39;t be edited, and the Zoovo team can hide a review that breaks our rules. If the author of a review deletes their account, the review stays, shown as by a &quot;Former Zoovo member&quot;. If you delete your account, the reviews about you are deleted.</li>
+<li><strong>Problem reports.</strong> The customer or the pro can report a problem with a booking, such as a no-show, with a short note. A card payment dispute also opens one. The Zoovo team reads them and decides on refunds. Problem reports are kept with the booking records (see Section 10).</li>
+<li><strong>Booking emails.</strong> We email customers and pros when a booking is confirmed or cancelled, when a problem is resolved, and to ask for a review. Emails are sent through Resend. We keep a record of each email we send you until your account is deleted.</li>
+</ul>
+<h3>Report cards you send</h3>
+<ul>
+<li>When a customer shares a report card from your booking to the feed, the post names you and your service (for example &quot;Walked by …&quot;). This is part of providing the service, and it is the customer who chooses to share it. The post is the customer&#39;s, and it is visible like their other posts.</li>
+<li>There is no separate copy for you: you and the customer see the same report-card photos, through the booking. You can see them for as long as they exist. If the customer deletes their account, the photos are deleted after the hold described in Section 6, and you can no longer see them either. If you delete your account, the customer keeps them. We can&#39;t delete copies you keep on your own phone.</li>
+</ul>
+<h3>If you delete your account as a pro</h3>
+<p>Your pro profile, services and documents are deleted, with their files. Upcoming bookings are cancelled, and their customers get a full refund of what they paid. We keep your payout record (your Stripe account ID, payout status and the last 4 digits of your bank account) without the link to your account, so payments and transfers can still be traced, together with the booking and payment records described in Section 10. Stripe keeps the data of your Stripe account under its own obligations.</p>
+<h2>8. Sharing your information</h2>
+<p>Other Zoovo users can see the content you choose to make visible — your profile, pets, posts, comments, and the approximate distance bands described above. Direct messages are visible only to you and the people in the conversation. The pros you book see the booking details described in Section 6, and your pets&#39; care info if you choose to share it. Lost-pet alerts are public, as described in Section 6.</p>
+<p>We may share information with service providers strictly to operate the app, and where required by law or to protect the rights and safety of our users. Our providers are:</p>
+<ul>
+<li><strong>Supabase</strong> — backend, database, authentication, and file storage;</li>
+<li><strong>Stripe</strong> — payments, saving your card when you make a booking weekly, and pros&#39; payouts and identity checks (see Sections 6 and 7 for Stripe&#39;s role);</li>
+<li><strong>Google</strong> — Firebase (usage analytics, crash reports and push notification delivery), Google Maps (the maps in the app), Sign in with Google, and on Android the phone&#39;s geocoding service;</li>
+<li><strong>Apple</strong> — push notification delivery, Sign in with Apple, and looking up addresses and place names on iPhone;</li>
+<li><strong>Resend</strong> — sending our emails;</li>
+<li><strong>Photon by komoot</strong> — searching for an address or a city as you type.</li>
+</ul>
+<h2>9. Transfers outside the European Economic Area</h2>
+<p>Some of our providers are based outside the European Economic Area (EEA), mainly in the United States, or may process data there: Stripe, Google (Firebase and Google Maps), Apple and Resend. Our backend is hosted by Supabase; where Supabase processes data outside the EEA, the same safeguards apply.</p>
+<p>When personal data is transferred outside the EEA, we rely on the safeguards these providers offer: the EU–U.S. Data Privacy Framework, for providers certified under it, and the Standard Contractual Clauses approved by the European Commission. You can ask us for more information about these safeguards at <strong>info@zoovo.eu</strong>.</p>
+<h2>10. Data retention</h2>
+<p>We keep your information for as long as your account is active. When you delete your account (see Section 11), we delete your account and the associated data — including your profile, pets, posts, comments, and messages — except for the records described below. Backups are purged on a rolling schedule.</p>
+<p>Some information has its own lifetime:</p>
+<ul>
+<li><strong>Booking and payment records</strong> — including problem reports, refunds, report-card notes, the address of a booking at your home and the Stripe references of payments, are kept for at least 7 years after the booking, as Dutch tax law requires (article 52 of the General Tax Act, the AWR). When you delete your account, we remove the link between these records and your account. Pros&#39; payout records are kept in the same way.</li>
+<li><strong>Report-card photos</strong> — part of the booking history while the customer&#39;s account exists. After the customer deletes their account, kept until 180 days after the booking ended, and longer while a problem report or card payment dispute about the booking is open; then deleted automatically.</li>
+<li><strong>Your Stripe customer record</strong> — when you delete your account, we remove our link to it. Stripe keeps payment records as its own legal obligations require.</li>
+<li><strong>Lost-pet alerts</strong> — active for 7 days, renewable once for 7 more days. Ended alerts and &quot;I&#39;m looking&quot; records are kept until the owner deletes the pet or their account. Records of who was sent an alert are deleted after 2 days.</li>
+<li><strong>Hazard reports</strong> — active for 7 days. The photo is deleted once the 7 days are over, and the note and votes 30 days after the report has ended. The rest of the record is kept for safety and moderation; if the reporter deletes their account, it is kept without any link to them. Records of who was sent an alert are deleted after 2 days.</li>
+<li><strong>Pet health books</strong> — until you delete the entry, the pet or your account. Booklet photos are deleted automatically when the pet or your account is deleted.</li>
+<li><strong>Notifications</strong> — read notifications are deleted after 30 days, and all notifications after 90 days.</li>
+<li><strong>Invite records</strong> — until either account is deleted.</li>
+<li><strong>Emails we sent you</strong> — our record of them is kept until your account is deleted.</li>
+<li><strong>Service page views</strong> — deleted after 13 months.</li>
+<li><strong>Crash reports</strong> — Google keeps crash reports for up to 90 days.</li>
+</ul>
+<h2>11. Deleting your account</h2>
 <p>You can permanently delete your account at any time from inside the app:</p>
 <p><strong>Profile → Settings → Delete account.</strong></p>
-<p>Deleting your account permanently removes your account, pets, posts, comments, and messages. This action cannot be undone.</p>
-<h2>9. Children</h2>
+<p>Deleting your account permanently removes your account, pets, posts, comments, and messages. This action cannot be undone. It also deletes your files from our storage: profile photos, pet photos, the photos and videos of your posts, and, for pros, pro photos, documents and service photos. This usually happens within minutes. Deleting a single pet, post or playdate deletes its files in the same way.</p>
+<p>Deleting your account also deletes your pets&#39; health books and booklet photos and your lost-pet alerts, and cancels your upcoming bookings. If you were the customer, a paid booking is refunded under its cancellation policy, and the remaining unpaid visits of a weekly booking are cancelled. Reviews you wrote stay, shown as by a &quot;Former Zoovo member&quot;. Hazard reports you made stay up until they expire, without any link to you.</p>
+<p>Some things are kept after your account is deleted, as described in Section 10:</p>
+<ul>
+<li>report-card photos, until the hold described in Section 6 ends;</li>
+<li>booking and payment records, for at least 7 years after the booking, without the link to your account;</li>
+<li>what Stripe keeps: your Stripe customer record, and for pros the data of your Stripe account, under Stripe&#39;s own legal obligations.</li>
+</ul>
+<h2>12. Children</h2>
 <p>Zoovo is <strong>not intended for children under 13.</strong> You must be at least 13 years old to create an account and use the app. We do not knowingly collect personal information from children under 13. If we learn that we have collected such information, we will delete it. If you believe a child under 13 has provided us with personal information, please contact us at <strong>info@zoovo.eu</strong>.</p>
-<h2>10. Your rights</h2>
-<p>Depending on where you live, you may have the right to access, correct, export, or delete your personal data, and to object to or restrict certain processing. You can update most of your information directly in the app, delete your account as described above, or contact us at <strong>info@zoovo.eu</strong> to make a request.</p>
-<h2>11. Security</h2>
+<h2>13. Your rights</h2>
+<p>Depending on where you live, you may have the right to access, correct, export, or delete your personal data, and to object to or restrict certain processing. Where we rely on your consent, you can withdraw it at any time; this does not affect what we did before. You can update most of your information directly in the app, delete your account as described above, or contact us at <strong>info@zoovo.eu</strong> to make a request. You can also complain to the Dutch Data Protection Authority (Autoriteit Persoonsgegevens).</p>
+<h2>14. Security</h2>
 <p>We take reasonable technical and organisational measures to protect your information, including access controls and encryption in transit. No method of transmission or storage is completely secure, so we cannot guarantee absolute security.</p>
-<h2>12. Changes to this policy</h2>
+<h2>15. Changes to this policy</h2>
 <p>We may update this Privacy Policy from time to time. When we make material changes, we will update the &quot;Last updated&quot; date above and, where appropriate, notify you in the app.</p>
-<h2>13. Contact</h2>
+<h2>16. Contact</h2>
 <p>If you have questions or requests regarding this Privacy Policy or your data, contact us at:</p>
 <p><strong>info@zoovo.eu</strong></p>
 <p>Data controller: <strong>Zoovo B.V. (Netherlands)</strong></p>
